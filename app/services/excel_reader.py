@@ -1,173 +1,62 @@
-# services/excel_reader.py
-
 import pandas as pd
 import os
-import json
+from typing import List, Dict, Any
+
 class ExcelReader:
-    def __init__(self, data_folder='storage/er'):
+    def __init__(self, data_folder: str = "storage"):
+        """
+        Initialize the Excel Reader.
+        
+        Args:
+            data_folder (str): Base folder for storing/reading Excel and CSV files
+        """
         self.data_folder = data_folder
-        self.file_path = self.find_file()
-        self.dataframe = None
+        os.makedirs(data_folder, exist_ok=True)
 
-    def find_file(self):
-        """Finds the first Excel or CSV file in the data folder."""
-        if not os.path.exists(self.data_folder):
-            raise FileNotFoundError(f"Data folder '{self.data_folder}' not found.")
-
-        for file_name in os.listdir(self.data_folder):
-            if file_name.endswith('.xlsx') or file_name.endswith('.xls') or file_name.endswith('.csv'):
-                return os.path.join(self.data_folder, file_name)
-
-        print("⚠️ No Excel or CSV file found in data folder.")
-        return None
-
-    def load_file(self):
-        if self.file_path is None:
-            self.file_path = self.find_file()
-
-        if self.file_path is None:
-            print("⚠️ No file path available. Did not find any Excel or CSV file.")
-            return
-
-        try:
-            if self.file_path.endswith('csv'):
-                self.dataframe = pd.read_csv(self.file_path)
-            elif self.file_path.endswith('.xlsx') or self.file_path.endswith('.xls'):
-                self.dataframe = pd.read_excel(self.file_path)
-
-            print(f"✅ Successfully loaded: {self.file_path}")
-        except Exception as e:
-            print(f"❌ Error loading file: {e}")
-
-    def get_all_data(self):
-        if self.dataframe is not None:
-            return self.dataframe
-        else:
-            print("⚠️ No data loaded. Please call load_file() first.")
-            return None
-
-    def get_column(self,  dataframe,column_name: str = "Email"):
-        if dataframe is not None:
-            if column_name in dataframe.columns:
-                return dataframe[column_name]
-            else:
-                print(f"⚠️ Column '{column_name}' not found.")
-                return None
-        else:
-            print("⚠️ No data loaded. Please call load_file() first.")
-            return None
-
-    def get_row(self, index):
-        if self.dataframe is not None:
-            if 0 <= index < len(self.dataframe):
-                return self.dataframe.iloc[index]
-            else:
-                print(f"⚠️ Index {index} is out of range.")
-                return None
-        else:
-            print("⚠️ No data loaded. Please call load_file() first.")
-            return None
-
-    def remove_duplicates(self, dataframe):
-        cleaned_df = dataframe.drop_duplicates(subset=['Email'])
-        return cleaned_df
+    def read_excel(self, file_path: str) -> pd.DataFrame:
+        """
+        Read an Excel file and return its contents as a pandas DataFrame.
         
-    def retrieve_email(self, column_data):
-        cleaned_emails = []
-
-        for email in column_data:
-            if email != '(No Email)' and pd.notna(email):
-                cleaned_emails.append(email)
+        Args:
+            file_path (str): Path to the Excel file (relative to data_folder)
             
-        return cleaned_emails 
-    
-    
-    def process_file(self):
-        """✨ Full process: load file, get all data, remove duplicates, and retrieve emails."""
-        self.load_file()
-        df = self.get_all_data()
-        if df is None:
-            print("❌ Failed to load data.")
-            return None
+        Returns:
+            pd.DataFrame: The contents of the Excel file
+        """
+        full_path = os.path.join(self.data_folder, file_path)
+        return pd.read_excel(full_path)
 
-        print(f"📄 Original entries: {len(df)}")
-        cleaned_df = self.remove_duplicates(df)
-        print(f"🧹 After removing duplicates: {len(cleaned_df)}")
+    def read_csv(self, file_path: str) -> pd.DataFrame:
+        """
+        Read a CSV file and return its contents as a pandas DataFrame.
         
-        temp_emails = self.get_column(cleaned_df)
-        emails = self.retrieve_email(temp_emails)
-        if emails is not None:
-            print(f"📧 Retrieved {len(emails)} emails.")
-            return emails
-        else:
-            print("⚠️ No emails retrieved.")
-            return None
-
-    def refresh(self):
-        """Force reload of the latest file in the folder."""
-        self.file_path = self.find_file()
-        self.load_file()
+        Args:
+            file_path (str): Path to the CSV file (relative to data_folder)
             
-    def clean_and_process_file(self, ctx):
-        self.load_file()
-        df = self.get_all_data()
+        Returns:
+            pd.DataFrame: The contents of the CSV file
+        """
+        full_path = os.path.join(self.data_folder, file_path)
+        return pd.read_csv(full_path)
 
-        if df is None:
-            print("❌ Failed to load data.")
-            return None
+    def write_excel(self, df: pd.DataFrame, file_path: str) -> None:
+        """
+        Write a DataFrame to an Excel file.
+        
+        Args:
+            df (pd.DataFrame): The DataFrame to write
+            file_path (str): Path to write the Excel file to (relative to data_folder)
+        """
+        full_path = os.path.join(self.data_folder, file_path)
+        df.to_excel(full_path, index=False)
 
-        print(f"📄 Original entries: {len(df)}")
-
-        # Step 1: Remove invalid emails
-        df = df[df["Email"].notna()]
-        df = df[df["Email"].str.strip() != "(No Email)"]
-
-        print(f"🧼 After removing invalid emails: {len(df)}")
-
-        # Step 2: Remove duplicates
-        df = df.drop_duplicates(subset=["Email"])
-        print(f"🧹 After removing duplicates: {len(df)}")
-
-
-
-        try:
-            # Step 3: Clean emails from the file
-            df["Email_cleaned"] = df["Email"].str.strip().str.lower()
-            email_set = set(df["Email_cleaned"])
-            # Step 4: Get trainee records from Lark base
-            table_id = os.getenv("TRAINEES_TABLE_ID")
-            lark_records = ctx.base_manager.get_records(table_id=table_id)
-
-            # Step 5: Extract en_names of matching emails
-            trainees = []
-            lark_emails = set()
-            for record in lark_records:
-                print(json.dumps(record.fields))
-                email = record.fields.get("lark.Work email")
-                if email:
-                    lark_emails.add(email.strip().lower())
-
-                
-                # Extract 'en_name' from inside the 'lark' list
-                lark_info = record.fields.get("lark", [])
-                name = None
-                if isinstance(lark_info, list) and lark_info:
-                    name = lark_info[0].get("en_name")
-                    id = lark_info[0].get("id")
-
-                if email and name and email.strip().lower() in email_set:
-                    trainees.append(id)
-
-            df = df[df["Email_cleaned"].isin(lark_emails)]
-            df.drop(columns=["Email_cleaned"], inplace=True)
-
-            # ✅ Overwrite the file
-            df.to_csv(self.file_path, index=False)
-            print(f"🔍 Trainees matched: {len(trainees)}")
-
-
-        except Exception as e:
-            print(f"❌ Failed during processing: {e}")
-            return None
-
-        return trainees
+    def write_csv(self, df: pd.DataFrame, file_path: str) -> None:
+        """
+        Write a DataFrame to a CSV file.
+        
+        Args:
+            df (pd.DataFrame): The DataFrame to write
+            file_path (str): Path to write the CSV file to (relative to data_folder)
+        """
+        full_path = os.path.join(self.data_folder, file_path)
+        df.to_csv(full_path, index=False) 

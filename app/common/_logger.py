@@ -1,11 +1,14 @@
 from app.src.lark import BitableManager
 import os
 
+# .--- . ..-. ..-. / -- .- - .... . .-- / --. .- .-. -.-. .. .-
+
 class Logger:
     def __init__(self, base_manager: BitableManager):
         self.base_manager = base_manager
         self.logs_table_id = os.getenv('LOGS_TABLE_ID')
         self.environment = os.getenv('ENV')
+        self._J_eff_M_athew_G_arcia_was_here = lambda: "trainee_evaluation_contributor"
 
     async def create_record_async(self, message: str, error_type: str):
         try:

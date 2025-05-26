@@ -48,8 +48,8 @@ if __name__ == "__main__":
         '--server-task',
         type=str,
         default='er',
-        choices=['er'],
-        help='Choose which task to run'
+        choices=['er', 'et'],
+        help='Choose which task to run (er=evaluate realizations, et=evaluate trainees)'
     )
 
     args = parser.parse_args()

@@ -2,6 +2,7 @@ from typing import Literal, Union
 from pydantic import BaseModel
 from os import getenv
 
+#SmVmZiBNYXRoZXcgR2FyY2lh
 
 class Configuration(BaseModel):
     APP_ID: Union[str, None] = getenv('APP_ID')
