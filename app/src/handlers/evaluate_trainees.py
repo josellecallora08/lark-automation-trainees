@@ -13,8 +13,6 @@ from datetime import datetime
 from datetime import timezone
 load_dotenv('.env', override=True)
 
-# 0x4A656666204D617468657720476172636961
-# \u004A\u0065\u0066\u0066\u0020\u004D\u0061\u0074\u0068\u0065\u0077\u0020\u0047\u0061\u0072\u0063\u0069\u0061
 
 class EvaluateTrainees(CallbackHandler):
     def __init__(self, context: AppContext):
