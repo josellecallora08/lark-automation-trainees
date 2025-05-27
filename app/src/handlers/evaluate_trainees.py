@@ -13,8 +13,6 @@ from datetime import datetime
 from datetime import timezone
 load_dotenv('.env', override=True)
 
-# 0x4A656666204D617468657720476172636961
-# \u004A\u0065\u0066\u0066\u0020\u004D\u0061\u0074\u0068\u0065\u0077\u0020\u0047\u0061\u0072\u0063\u0069\u0061
 
 class EvaluateTrainees(CallbackHandler):
     def __init__(self, context: AppContext):
@@ -148,10 +146,10 @@ class EvaluateTrainees(CallbackHandler):
                     # Validate and convert date to timestamp
                     date_str = row.get('Date', None)
                     formatted_date = None
-                    if date_str and date_str.strip():
+                    if date_str and str(date_str).strip():
                         try:
                             # Extract only the date portion and convert to timestamp
-                            date_obj = datetime.strptime(date_str.strip().split(" - ")[0], '%b %d %Y')
+                            date_obj = datetime.strptime(str(date_str).strip().split(" - ")[0], '%b %d %Y')
                             # Convert to UTC timestamp in milliseconds
                             formatted_date = int(date_obj.replace(tzinfo=timezone.utc).timestamp() * 1000)
                         except ValueError as ve:
@@ -161,21 +159,35 @@ class EvaluateTrainees(CallbackHandler):
                     # Validate and convert user rating
                     user_rating_str = row.get('User Rating', None)
                     user_rating = None
-                    if user_rating_str and user_rating_str.strip().upper() != 'N/A':
+                    if user_rating_str and str(user_rating_str).strip().upper() != 'N/A':
                         try:
-                            user_rating = float(user_rating_str.strip())
+                            user_rating = float(str(user_rating_str).strip())
                         except ValueError:
                             self.ctx.logger.error(f"Invalid user rating '{user_rating_str}' at row {index}")
                             user_rating = None
 
                     status_raw = str(row['Status']).strip() if pd.notna(row['Status']) else None
-                    status_value = "Passed" if "Passed" in status_raw else "Pending"
+                    
+                    # Map the status values appropriately
+                    if status_raw:
+                        if "Evaluated Passed" in status_raw:
+                            status_value = "Evaluated Passed"
+                        elif "Evaluated Failed" in status_raw:
+                            status_value = "Evaluated Failed"
+                        elif "Waiting for user" in status_raw:
+                            status_value = "Waiting for user"
+                        elif "No Score" in status_raw:
+                            status_value = "No Score"
+                        else:
+                            status_value = status_raw  # Keep original status if none of the above match
+                    else:
+                        status_value = "No Score"  # Default to No Score if status is empty
 
                     fields_to_add = {
-                        "date": formatted_date,  # Use timestamp in milliseconds
+                        "date": formatted_date,  # Use the timestamp directly
                         "username": str(row['Username']).strip() if pd.notna(row['Username']) else None,
                         "email": str(row['Email']).strip() if pd.notna(row['Email']) else None,
-                        "status": "Passed",
+                        "status": status_value,  # Use the properly mapped status value
                         "name": str(row['Name']).strip() if pd.notna(row['Name']) else None,
                         "final_score": int(evaluation_data['final_score']) if evaluation_data['final_score'] is not None else 0,
                         "engagement_score": int(evaluation_data['engagement']) if evaluation_data['engagement'] is not None else 0,
