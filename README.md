@@ -137,10 +137,14 @@ Logs are stored in the `logs/` directory. The system uses structured logging for
 4. Push to the branch
 5. Create a Pull Request
 
+## Contributors
+
+- Jeffmathew D. Garcia (Shin-da) - Core development on Evaluate Trainees functionality.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Support
 
-[Add support information here] 
+For questions, bug reports, or feature requests, please open an issue on the GitHub repository. 
